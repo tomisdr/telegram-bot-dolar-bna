@@ -13,21 +13,30 @@ let historial = [];
 async function obtenerDolar() {
   try {
     const { data } = await axios.get('https://www.bna.com.ar/Personas', {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'es-AR,es;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Referer': 'https://www.bna.com.ar/',
+      }
     });
     const $ = cheerio.load(data);
     
     let compra = null;
     let venta = null;
 
-    $('table.tit-tableaux tr').each((i, row) => {
+    $('table tr').each((i, row) => {
       const cols = $(row).find('td');
-      if ($(cols[0]).text().trim() === 'Dólar U.S.A') {
+      const texto = $(cols[0]).text().trim();
+      if (texto.includes('Dólar') || texto.includes('Dolar') || texto.includes('U.S.A')) {
         compra = $(cols[1]).text().trim();
         venta = $(cols[2]).text().trim();
       }
     });
 
+    console.log('Compra:', compra, 'Venta:', venta);
     return { compra, venta };
   } catch (err) {
     console.error('Error scraping BNA:', err.message);
