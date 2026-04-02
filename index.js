@@ -14,25 +14,34 @@ async function obtenerDolar() {
   try {
     const { data } = await axios.get('https://www.bna.com.ar/Personas', {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'es-AR,es;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Referer': 'https://www.bna.com.ar/',
-      }
-    });
-    const $ = cheerio.load(data);
-    
-    // Imprimimos TODAS las filas de TODAS las tablas
-    $('table tr').each((i, row) => {
-      const cols = $(row).find('td');
-      if (cols.length >= 3) {
-        console.log(`Fila ${i}: "${$(cols[0]).text().trim()}" | "${$(cols[1]).text().trim()}" | "${$(cols[2]).text().trim()}"`);
+        'User-Agent': 'Mozilla/5.0',
       }
     });
 
-    return null;
+    const $ = cheerio.load(data);
+
+    let compra = null;
+    let venta = null;
+
+    $('tr').each((i, el) => {
+      const texto = $(el).text();
+
+      if (texto.includes('Dólar') || texto.includes('Dolar')) {
+        const tds = $(el).find('td');
+
+        if (tds.length >= 3) {
+          compra = $(tds[1]).text().trim();
+          venta = $(tds[2]).text().trim();
+        }
+      }
+    });
+
+    if (!compra || !venta) {
+      throw new Error('No se encontraron valores del dólar');
+    }
+
+    return { compra, venta };
+
   } catch (err) {
     console.error('Error scraping BNA:', err.message);
     return null;
