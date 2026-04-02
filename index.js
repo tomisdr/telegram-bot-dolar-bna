@@ -24,20 +24,15 @@ async function obtenerDolar() {
     });
     const $ = cheerio.load(data);
     
-    let compra = null;
-    let venta = null;
-
+    // Imprimimos TODAS las filas de TODAS las tablas
     $('table tr').each((i, row) => {
       const cols = $(row).find('td');
-      const texto = $(cols[0]).text().trim();
-      if (texto.includes('Dólar') || texto.includes('Dolar') || texto.includes('U.S.A')) {
-        compra = $(cols[1]).text().trim();
-        venta = $(cols[2]).text().trim();
+      if (cols.length >= 3) {
+        console.log(`Fila ${i}: "${$(cols[0]).text().trim()}" | "${$(cols[1]).text().trim()}" | "${$(cols[2]).text().trim()}"`);
       }
     });
 
-    console.log('Compra:', compra, 'Venta:', venta);
-    return { compra, venta };
+    return null;
   } catch (err) {
     console.error('Error scraping BNA:', err.message);
     return null;
