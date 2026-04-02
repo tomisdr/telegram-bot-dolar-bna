@@ -5,6 +5,10 @@ const cheerio = require('cheerio');
 const TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
+// 🔍 DEBUG variables de entorno
+console.log("TOKEN:", TOKEN ? "OK" : "FALTA");
+console.log("CHAT_ID:", CHAT_ID);
+
 const bot = new TelegramBot(TOKEN, { polling: true });
 
 let ultimoValor = null;
@@ -13,31 +17,37 @@ let historial = [];
 async function obtenerDolar() {
   try {
     const { data } = await axios.get('https://www.bna.com.ar/Personas', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-      }
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
+
+    // 🔍 DEBUG HTML recibido
+    console.log("===== HTML recibido (primeros 500 chars) =====");
+    console.log(data.slice(0, 500));
 
     const $ = cheerio.load(data);
 
     let compra = null;
     let venta = null;
 
-    $('tr').each((i, el) => {
-      const texto = $(el).text();
+    $('#billetes tbody tr').each((i, row) => {
+      const cols = $(row).find('td');
+      const nombre = $(cols[0]).text().trim();
 
-      if (texto.includes('Dólar') || texto.includes('Dolar')) {
-        const tds = $(el).find('td');
+      // 🔍 DEBUG filas encontradas
+      console.log("Fila encontrada:", nombre);
 
-        if (tds.length >= 3) {
-          compra = $(tds[1]).text().trim();
-          venta = $(tds[2]).text().trim();
-        }
+      if (nombre.includes('Dólar')) {
+        compra = $(cols[1]).text().trim();
+        venta = $(cols[2]).text().trim();
       }
     });
 
+    // 🔍 DEBUG resultado final
+    console.log("Compra:", compra, "Venta:", venta);
+
     if (!compra || !venta) {
-      throw new Error('No se encontraron valores del dólar');
+      console.log('⚠️ No se encontró el dólar correctamente');
+      return null;
     }
 
     return { compra, venta };
@@ -63,11 +73,19 @@ async function verificar() {
 
     const msg = `💵 *Dólar BNA actualizado*\n\n🟢 Compra: $${datos.compra}\n🔴 Venta: $${datos.venta}\n🕐 Hora: ${ahora}`;
     bot.sendMessage(CHAT_ID, msg, { parse_mode: 'Markdown' });
-    console.log('Cambio detectado, mensaje enviado.');
+    console.log('✅ Cambio detectado, mensaje enviado.');
   } else {
     console.log('Sin cambios:', valorActual);
   }
 }
+
+// 📩 TEST al iniciar
+bot.sendMessage(CHAT_ID, "🚀 Bot iniciado");
+
+// 🧪 Test directo scraping
+obtenerDolar().then(res => {
+  console.log("RESULTADO FINAL:", res);
+});
 
 // Comando /dolar
 bot.onText(/\/dolar/, async (msg) => {
@@ -96,9 +114,13 @@ bot.onText(/\/historial/, (msg) => {
 
 // Comando /start
 bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(msg.chat.id, '👋 *Bot Dólar BNA activo!*\n\nComandos disponibles:\n/dolar — Ver valor actual\n/historial — Ver últimos cambios', { parse_mode: 'Markdown' });
+  bot.sendMessage(
+    msg.chat.id,
+    '👋 *Bot Dólar BNA activo!*\n\nComandos disponibles:\n/dolar — Ver valor actual\n/historial — Ver últimos cambios',
+    { parse_mode: 'Markdown' }
+  );
 });
 
-console.log('Bot iniciado. Verificando cada 5 minutos...');
+console.log('🤖 Bot iniciado. Verificando cada 5 minutos...');
 verificar();
 setInterval(verificar, 5 * 60 * 1000);
